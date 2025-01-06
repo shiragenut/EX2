@@ -11,19 +11,10 @@ public class SCell implements Cell {
 
     @Override
     public int getOrder() {
-        if (type == Ex2Utils.NUMBER || type == Ex2Utils.TEXT) {
-            return 0;
-        }
-        if (type == Ex2Utils.FORM) {
-            int maxOrder = 0;
-            String[] dependentCells = extractDependentCells(line);
-            for (String dependentCell : dependentCells) {
-                int cellOrder = getOrderFromSpreadsheet(cell);
-                maxOrder = Math.max(maxOrder, cellOrder);
-            }
-            return 1 + maxOrder;
-        }
+        // Add your code here
+
         return 0;
+        // ///////////////////
     }
 
     //@Override
