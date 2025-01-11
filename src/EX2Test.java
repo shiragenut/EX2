@@ -120,31 +120,31 @@ class EX2Test {
         assertEquals(6.0, SCell.computeForm("=(1+2)*2"), 0.001);
         assertEquals(2.5, SCell.computeForm("=5/2"), 0.001);
     }
-//    @Test
-//    void depth() {
-//        Ex2Sheet sheet = new Ex2Sheet(5, 5);  // 5X5 sheet
-//
-//        sheet.set(0, 0, "5");
-//        sheet.set(0, 1, "hello");
-//        int[][] depths = sheet.depth();
-//        assertEquals(0, depths[0][0]);
-//        assertEquals(0, depths[0][1]);
-//
-//
-////        sheet.set(1, 0, "=A1");        // B1 = A1
-////        depths = sheet.depth();
-////        assertEquals(1, depths[1][0]);
-//
-//        sheet.set(2, 0, "=B1+A1");     // C1 = B1+A1
-//        depths = sheet.depth();
-//        assertEquals(2, depths[2][0]);
-//
-//        sheet.set(3, 0, "=D2");
-//        sheet.set(3, 1, "=D1");
-//        depths = sheet.depth();
-//        assertEquals(Ex2Utils.ERR_CYCLE_FORM, depths[3][0]);
-//        assertEquals(Ex2Utils.ERR_CYCLE_FORM, depths[3][1]);
-//    }
+    @Test
+    void depth() {
+        Ex2Sheet sheet = new Ex2Sheet(5, 5);  // 5X5 sheet
+
+        sheet.set(0, 0, "5");
+        sheet.set(0, 1, "hello");
+        int[][] depths = sheet.depth();
+        assertEquals(0, depths[0][0]);
+        assertEquals(0, depths[0][1]);
+
+
+        sheet.set(1, 0, "=A1");        // B1 = A1
+        depths = sheet.depth();
+        assertEquals(1, depths[1][0]);
+
+        sheet.set(2, 0, "=B1+A1");     // C1 = B1+A1
+        depths = sheet.depth();
+        assertEquals(2, depths[2][0]);
+
+        sheet.set(3, 0, "=D2");
+        sheet.set(3, 1, "=D1");
+        depths = sheet.depth();
+        assertEquals(Ex2Utils.ERR_CYCLE_FORM, depths[3][0]);
+        assertEquals(Ex2Utils.ERR_CYCLE_FORM, depths[3][1]);
+    }
 
     @Test
     void testEdgeCaseFormulas() {

@@ -138,7 +138,7 @@ public class Ex2Sheet implements Sheet {
         }
         if (cell.getType() == Ex2Utils.FORM) { //For form cells, need to check dependencies
             String form = cell.getData();
-            int maxDependencyDepth = -1;
+            int maxDependencyDepth = 0;
             for (int i = 1; i < form.length(); i++) { //Go through the form string
                 if (Character.isUpperCase(form.charAt(i))) { //Found potential cell reference
                     int j = i + 1;
