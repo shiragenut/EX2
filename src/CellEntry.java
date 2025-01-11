@@ -17,7 +17,7 @@ public class CellEntry  implements Index2D {
                 this.y = Ex2Utils.ERR;
             }
             this.x = letter - 'A'; //Convert letter to column number (A=0, B=1,..)
-            this.y = Integer.parseInt(cell.substring(1)); //Convert remaining string to row
+            this.y = Integer.parseInt(cell.substring(1)) -1; //Convert remaining string to row
 
             if (!isValid()) { //Check if coordinates are within valid range
                 this.x = Ex2Utils.ERR;
@@ -29,9 +29,22 @@ public class CellEntry  implements Index2D {
         }
     }
 
+    public CellEntry(int xx, int yy) {
+        if (xx < 0 || xx >= Ex2Utils.WIDTH || yy < 0 || yy >= Ex2Utils.HEIGHT) {
+            this.x = Ex2Utils.ERR;
+            this.y = Ex2Utils.ERR;
+            return;
+        }
+        this.x = xx;
+        this.y = yy;
+    }
+
     @Override
     public boolean isValid() {
-        return  x>= 0 && x<26 && y>=0 && y<100;
+        boolean validColum = x >= 0 && x < 26;
+        boolean validRow = y >= 0 && y < 100;
+        boolean withinRange = x < Ex2Utils.WIDTH && y < Ex2Utils.HEIGHT;
+        return validColum && validRow && withinRange;
     }
     @Override
     public int getX() {
@@ -45,6 +58,6 @@ public class CellEntry  implements Index2D {
         if (!isValid()) {
             return null;
         }
-        return Ex2Utils.ABC[x]+y; //Convert coordinates back to cell reference
+        return Ex2Utils.ABC[x]+(y + 1); //Convert coordinates back to cell reference
     }
 }

@@ -1,5 +1,3 @@
-// Add your documentation below:
-
 public class SCell implements Cell {
     private String line; //Initialize cell content
     private int type; //Initialize cell type (text=1, number=2, form=3)
@@ -56,10 +54,15 @@ public void setData(String s) {
             type = Ex2Utils.TEXT; //If line is null or empty, the type cell is text
             return;
         } //Check the type cell by the function isNumber, isForm and isText
+        if (line.startsWith("=")) {
+            type = Ex2Utils.FORM;
+            if (!isForm(line)) {
+                type = Ex2Utils.ERR_FORM_FORMAT;
+            }
+            return;
+        }
         if (isNumber(line)) {
             type = Ex2Utils.NUMBER;
-        } else if (isForm(line)) {
-            type = Ex2Utils.FORM;
         } else {
             type = Ex2Utils.TEXT;
         }
@@ -88,9 +91,10 @@ public void setData(String s) {
         if (!Text.startsWith("=")) {
             return false; //A valid formula must start with char "="
         }
-        String Form = Text.substring(1);//Remove the leading "=" for further checks
+        String Form = Text.substring(1).trim();//Remove the leading "=" for further checks
         if (Form.matches("[A-Z]+[0-9]+")) {
-            return true;
+            CellEntry ce = new CellEntry(Form);
+            return ce.isValid();
         }
         if (Form.isEmpty()) {
             return false; //If the formula part is empty, it's not a valid formula
@@ -132,6 +136,85 @@ public void setData(String s) {
         }
         //Ensure all conditions for a valid formula are met - parentheses are balanced,at least one operator is present and the last character isn't an operator
         return (balance == 0 && operatorCount >= 0 && !lastOperator);
+    }
+
+    public static double computeForm(String form) {
+        if (!isForm(form)) { //Verify form is valid
+            try {
+                return Double.parseDouble(form);
+            } catch (NumberFormatException e) {
+                return Ex2Utils.ERR_FORM_FORMAT;
+            }
+        }
+        String expression = form.substring(1); //Remove the leading "=" from the form
+        if (expression.startsWith("(") && expression.endsWith(")")) { //If form is wrapped in parentheses
+            expression = expression.substring(1, expression.length() - 1); //Remove out of parentheses
+        }
+        try {
+            return Double.parseDouble(expression);
+        } catch (NumberFormatException e) {
+            int parenthesesCount = 0; //Track nested parentheses depth
+            char lastOperator = ' '; //Store the main operator
+            int lastPlusMinusIndex = -1; //Position of the main operator
+
+            for (int i = 0; i < expression.length(); i++) { //Scan through the expression
+                char c = expression.charAt(i);
+                if (c == '(') { //Track opening parentheses
+                    parenthesesCount++;
+                } else if (c == ')') { //Track closing parentheses
+                    parenthesesCount--;
+                } else if (parenthesesCount == 0) { //If not within parentheses
+                    if (c == '+' || c == '-') { //Check for * or / operators first
+                        lastPlusMinusIndex = i;
+                        lastOperator = c;
+                    }
+                }
+            }
+            if (lastPlusMinusIndex != -1) {  //Use priority operator if found
+                //Split expression to a leftPart (before the operator) and rightPart (after the operator
+                String leftPart = expression.substring(0, lastPlusMinusIndex).trim();
+                String rightPart = expression.substring(lastPlusMinusIndex + 1).trim();
+                double left = computeForm("=" + leftPart); //Compute left part
+                double right = computeForm("=" + rightPart); //Compute rightPart
+                if (lastOperator == '+') {
+                    return left + right;
+                } else {
+                return left - right;
+                }
+            }
+            for (int i = 0; i < expression.length(); i++) {
+                char c = expression.charAt(i);
+                if (parenthesesCount == 0) {
+                    if (c == '*' || c == '/') {
+                        String leftPart = expression.substring(0, i).trim();
+                        String rightPart = expression.substring(i + 1).trim();
+                        double left = computeForm("=" + leftPart);
+                        double right = computeForm("=" + rightPart);
+                        if (c == '*') {
+                            return left * right;
+                        }
+                        if (c == '/') {
+                            if (right == 0){
+                                throw new ArithmeticException();
+                            }
+                            return left / right;
+                        }
+                    }
+                }
+            }
+            int j = 1; //Check if it's a cell reference
+            while (j < expression.length() && Character.isUpperCase(expression.charAt(0)) && Character.isDigit(expression.charAt(j))) {
+                j++;
+            }
+            CellEntry ce = new CellEntry(expression.substring(0, j));
+            if (!ce.isValid() || ce.getY() >= Ex2Utils.HEIGHT) {
+                return Ex2Utils.ERR_FORM_FORMAT;
+            }
+            if (j == expression.length()) {
+                return 0;
+            }
+            return Double.parseDouble(expression); //Return the number
+        }
     }
 }
 
