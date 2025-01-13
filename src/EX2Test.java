@@ -15,12 +15,9 @@ class EX2Test {
             assertFalse(SCell.isNumber(num), num + " Should NOT be a valid number");
         }
     }
-
-
-
     @Test
     void isForm() {
-        String[] validForm = {"=1", "=A9", "=(1+A2)*(8/5)", "=A9+C4", "=(1+2)*((3))-1", "=-5"};
+        String[] validForm = {"=1", "=A9","=10.2", "=(1+A2)*(8/5)", "=A9+C4", "=(1+2)*((3))-1", "=-5"};
         String[] unValidForm = {"1+4","AB", "@2", "2+)","=2 + 2", "=(3+1*2)-", "=()", "=1+*8", "=(1+2","=+", " "};
         for (String Form : validForm) {
             assertTrue(SCell.isForm(Form), Form + " Should be a valid form");
@@ -54,8 +51,8 @@ class EX2Test {
     @Test
     public void testSetAndGetType() {
         SCell cell = new SCell("Test");
-        cell.setType(Ex2Utils.NUMBER);
-        assertEquals(Ex2Utils.NUMBER, cell.getType());
+        cell.setType(Ex2Utils.TEXT);
+        assertEquals(Ex2Utils.TEXT, cell.getType());
     }
 
     @Test
@@ -128,38 +125,38 @@ class EX2Test {
     @Test
     void testComputeFormInvalidExpression() {
         Sheet sheet = new Ex2Sheet();
-        String form = "=3+a";  // ביטוי לא תקני (אין משתנה a)
+        String form = "=3+a";
         double result = Ex2Sheet.computeForm(form, new HashSet<>(), sheet);
-        assertEquals(Ex2Utils.ERR, result);  // שגיאה בהבנת הביטוי
+        assertEquals(Ex2Utils.ERR, result);
     }
     @Test
     void testDepthBasicFormula() {
         Sheet sheet = new Ex2Sheet();
-        sheet.set(0, 0, "=1");  // A1 = 1
+        sheet.set(0, 0, "=1");
         int[][] depths = sheet.depth();
-        assertEquals(1, depths[0][0]);  // נוסחה פשוטה, עומק 1
+        assertEquals(1, depths[0][0]);
     }
 
     @Test
     void testDepthReferenceAnotherCell() {
         Sheet sheet = new Ex2Sheet();
-        sheet.set(0, 0, "=1");  // A1 = 1
-        sheet.set(1, 0, "=A1"); // B1 = A1
+        sheet.set(0, 0, "=1");
+        sheet.set(1, 0, "=A1");
         int[][] depths = sheet.depth();
-        assertEquals(0, depths[0][0]); // A1 עומק 0
-        assertEquals(1, depths[1][0]); // B1 עומק 1
+        assertEquals(1, depths[0][0]);
+        assertEquals(2, depths[1][0]);
     }
 
     @Test
     void testDepthMultipleDependencies() {
         Sheet sheet = new Ex2Sheet();
-        sheet.set(0, 0, "=1");  // A1 = 1
-        sheet.set(1, 0, "=1");  // B1 = 1
-        sheet.set(2, 0, "=A1+B1");  // C1 = A1 + B1
+        sheet.set(0, 0, "=1");
+        sheet.set(1, 0, "=1");
+        sheet.set(2, 0, "=A1+B1");
         int[][] depths = sheet.depth();
-        assertEquals(0, depths[0][0]); // A1 עומק 0
-        assertEquals(0, depths[1][0]); // B1 עומק 0
-        assertEquals(1, depths[2][0]); // C1 עומק 1
+        assertEquals(1, depths[0][0]);
+        assertEquals(1, depths[1][0]);
+        assertEquals(2, depths[2][0]);
     }
 
     @Test

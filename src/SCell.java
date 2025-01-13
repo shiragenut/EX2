@@ -43,6 +43,7 @@ public class SCell implements Cell {
 
     @Override
     public int getType() {
+//        computeType();
         return type; //Get cell type
     }
 
@@ -68,8 +69,7 @@ public class SCell implements Cell {
             } else {
                 t_type = Ex2Utils.ERR_FORM_FORMAT;
             }
-        }
-        if (isNumber(line)) {
+        } else if (isNumber(line)) {
             t_type = Ex2Utils.NUMBER;
         } else if(isText(line)){
             t_type = Ex2Utils.TEXT;
@@ -95,99 +95,124 @@ public class SCell implements Cell {
         return !(s.startsWith("=") || s.startsWith("+") || isNumber(s)); //If the string is neither a number nor a formula, it is text
     }
 
-    public static boolean isForm(String Text) { //Function to check if the string is a valid formula
-        if (Text == null || Text.isEmpty()) {
-            return false; //Check if string is empty or null
-        }
-        if (!Text.startsWith("=")) {
-            return false; //A valid formula must start with char "="
-        }
-        String Form = Text.substring(1).trim();//Remove the leading "=" for further checks
-        if (Form.isEmpty()) {
-            return false; //If the formula part is empty, it's not a valid formula
-        }
-        if (Form.contains(" ")){
+    public static boolean isForm(String Text) {
+        // Basic validations
+        if (Text == null || Text.isEmpty()) { // Check if the input is null or empty
             return false;
         }
-        //Initialize variables to track balance, operators and consecutive operators
-        int balance = 0;
-        int operatorCount = 0;
-        StringBuilder cellReferences = new StringBuilder();
-        boolean lastOperator = false;
-        boolean insideParentheses = false;
-        boolean isNegative = false;
+        if (!Text.startsWith("=")) { // Check if the input starts with '=' (formula indicator)
+            return false;
+        }
 
-        for (int i = 0; i < Form.length(); i++) { //Loop through each character in the Form.
+        String Form = Text.substring(1).trim(); // Remove the '=' and trim whitespace
+        if (Form.isEmpty()) { // Check if the formula is empty after removing '='
+            return false;
+        }
+        if (Form.contains(" ")) { // Formulas should not contain spaces
+            return false;
+        }
+
+        if (isNumber(Form)) { // If the formula is a valid number, return true
+            return true;
+        }
+
+        int balance = 0; // Tracks the balance of parentheses
+        int operatorCount = 0; // Counts the number of operators
+        StringBuilder cellReferences = new StringBuilder(); // Stores valid cell references
+        boolean lastOperator = false; // Tracks if the last character was an operator
+        boolean insideParentheses = false; // Tracks if currently inside parentheses
+        boolean isNegative = false; // Tracks if the number is negative
+        boolean inNumber = false; // Tracks if currently inside a number
+        boolean hasDecimal = false; // Tracks if the current number has a decimal point
+
+        // Iterate through each character in the formula
+        for (int i = 0; i < Form.length(); i++) {
             char current = Form.charAt(i);
-            if (!Character.isLetterOrDigit(current) && "+-*/()".indexOf(current) == -1) { //Check for invalid characters in the formula
-                return false; //Invalid character found
+
+            // Validate character: must be digit, operator, parentheses, dot, or valid letter
+            if (!Character.isDigit(current) &&
+                    "+-*/().".indexOf(current) == -1 &&
+                    (current < 'A' || current > 'Z')) {
+                return false;
             }
-            if (current == '.') {
-                if (i == 0 || !Character.isDigit(Form.charAt(i - 1))) {
+            if (current == '.') { // Handle decimal point
+                if (!inNumber || hasDecimal) { // Decimal point is invalid outside numbers or if repeated
                     return false;
                 }
-                int j = i + 1;
-                while (j < Form.length() && Character.isDigit(Form.charAt(j))) {
-                    j++;
-                }
-                if (j == i + 1) {
-                    return false;
-                }
-                i = j - 1;
+                hasDecimal = true;
+                continue;
             }
 
-            //Handle parentheses
-            if (current == '(') { //Increase balance for '('
-                balance++;
-                insideParentheses = true;
-            } else if (current == ')') {//Decrease balance for ')'
-                balance--;
-                if (balance < 0) { //If balance negative, it means there is an unmatched closing parenthesis
-                    return false; //Parentheses must be balanced
-                }
-                if (insideParentheses && i > 0 && Form.charAt(i - 1) == '(') {
-                    return false; //If it's an empty parentheses "()", return false
-                }
-                insideParentheses = false;
+            if (Character.isDigit(current)) { // If the character is a digit
+                inNumber = true; // Mark as inside a number
+            } else if ("+-*/()".indexOf(current) != -1) { // If the character is an operator or parentheses
+                inNumber = false; // End the current number
+                hasDecimal = false; // Reset decimal flag
             }
-            //Check for operators '+','-','*','/'
-            if (current == '+' || current == '-' || current == '*' || current == '/') {
-                if (lastOperator) {
-                    return false; //If the previous character was also an operator, it's invalid
+
+            if (Character.isLetter(current)) { // Handle cell references (e.g., A1, B2)
+                if (i + 1 >= Form.length()) { // A letter must be followed by a digit
+                    return false;
                 }
-                operatorCount++; //Count the operator
-                lastOperator = true; //Mark that the current character is an operator
+                if (!Character.isDigit(Form.charAt(i + 1))) { // Check if the next character is a digit
+                    return false;
+                }
+            }
+
+            if (current == '(') { // Handle opening parentheses
+                balance++; // Increment balance
+                insideParentheses = true; // Mark as inside parentheses
+            } else if (current == ')') { // Handle closing parentheses
+                balance--; // Decrement balance
+                if (balance < 0) { // Check for unmatched closing parentheses
+                    return false;
+                }
+                if (insideParentheses && i > 0 && Form.charAt(i - 1) == '(') { // Empty parentheses are invalid
+                    return false;
+                }
+                insideParentheses = false; // Exit parentheses
+            }
+
+            if ("+-*/".indexOf(current) != -1) { // Handle operators
+                if (lastOperator) { // Two consecutive operators are invalid
+                    return false;
+                }
+                operatorCount++; // Increment operator count
+                lastOperator = true; // Mark as the last character being an operator
             } else {
-                lastOperator = false; // Reset the flag if the current character isn't an operator
+                lastOperator = false; // Reset operator flag
             }
-            //Handle negative sign
-            if (current == '-' && (i == 1 || (i > 0 && (Form.charAt(i - 1) == '(' || "+-*/".indexOf(Form.charAt(i - 1)) != -1)))) {
+
+            if (current == '-' && (i == 0 || (i > 0 && (Form.charAt(i - 1) == '(' || "+-*/".indexOf(Form.charAt(i - 1)) != -1)))) {
+                // Handle negative numbers (e.g., -5 or (-5))
                 isNegative = true;
                 continue;
             }
-            if (Character.isLetter(current)) { //Check for cell reference (e.g, A1, B2)
+
+            if (Character.isLetter(current)) { // Parse cell references (e.g., A1, B2)
                 int j = i + 1;
                 StringBuilder cellRef = new StringBuilder();
                 cellRef.append(current);
-                if (j < Form.length() && Character.isDigit(Form.charAt(j))) {
-                    while (j < Form.length() && Character.isDigit(Form.charAt(j))) {
+
+                if (j < Form.length() && Character.isDigit(Form.charAt(j))) { // Validate digits following the letter
+                    while (j < Form.length() && Character.isDigit(Form.charAt(j))) { // Collect the digits
                         cellRef.append(Form.charAt(j++));
                     }
-                    if (cellRef.length() >= 2 && cellRef.length() <= 3 && Character.isLetter(cellRef.charAt(0))) {
-                        //Check if cell reference is valid
+                    if (cellRef.length() >= 2 && cellRef.length() <= 3 && Character.isLetter(cellRef.charAt(0))) { // Validate length and format
                         CellEntry ce = new CellEntry(cellRef.toString());
-                        if (ce.isValid()) {
-                            cellReferences.append(cellRef.toString()).append(" ");
+                        if (ce.isValid()) { // Validate the cell reference
+                            cellReferences.append(cellRef.toString()).append(" "); // Append valid cell reference
                         }
-                        i = j - 1;
+                        i = j - 1; // Update the loop index
                     } else {
-                        return false;
+                        return false; // Invalid cell reference
                     }
                 }
             }
         }
-        //Ensure all conditions for a valid formula are met - parentheses are balanced,at least one operator is present and the last character isn't an operator
-        return (balance == 0 && !lastOperator);
+
+        // Formula is valid if parentheses are balanced and does not end with an operator (unless no operators exist)
+        return (balance == 0 && (!lastOperator || operatorCount == 0));
     }
 }
 
