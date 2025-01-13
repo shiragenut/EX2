@@ -4,19 +4,17 @@ public class CellEntry  implements Index2D {
     private int y; //Represent the row number (0-99)
 
     public CellEntry(String cell) {
-        if (cell == null || cell.isEmpty() || !Character.isLetter(cell.charAt(0))) {
-            this.x = Ex2Utils.ERR;
-            this.y = Ex2Utils.ERR;
-            return; //If cell is null, empty or doesn't start with a letter, mark as invalid
+        this.x = Ex2Utils.ERR;
+        this.y = Ex2Utils.ERR;
+        if (cell == null || cell.length() < 2 || cell.length() > 3) {
+            return; //If cell is null, empty or has less than 2 or more than 3 chars, mark as invalid
         }
-
-        try { //Attempt to convert the cell reference to numeric coordinate
-            char letter = Character.toUpperCase(cell.charAt(0));
-            if (letter < 'A' || letter > 'Z') { //if letter isn't in the range A-Z, update x and y to ERROR
-                this.x = Ex2Utils.ERR;
-                this.y = Ex2Utils.ERR;
-            }
-            this.x = letter - 'A'; //Convert letter to column number (A=0, B=1,..)
+        char firstChar = Character.toUpperCase(cell.charAt(0));
+        if (firstChar < 'A' || firstChar > 'Z') { //if letter isn't in the range A-Z, update x and y to ERROR
+            return;
+        }
+        try {
+            this.x = firstChar - 'A'; //Convert letter to column number (A=0, B=1,..)
             this.y = Integer.parseInt(cell.substring(1)) -1; //Convert remaining string to row
 
             if (!isValid()) { //Check if coordinates are within valid range
@@ -33,18 +31,15 @@ public class CellEntry  implements Index2D {
         if (xx < 0 || xx >= Ex2Utils.WIDTH || yy < 0 || yy >= Ex2Utils.HEIGHT) {
             this.x = Ex2Utils.ERR;
             this.y = Ex2Utils.ERR;
-            return;
+        } else {
+            this.x = xx;
+            this.y = yy;
         }
-        this.x = xx;
-        this.y = yy;
     }
 
     @Override
     public boolean isValid() {
-        boolean validColum = x >= 0 && x < 26;
-        boolean validRow = y >= 0 && y < 100;
-        boolean withinRange = x < Ex2Utils.WIDTH && y < Ex2Utils.HEIGHT;
-        return validColum && validRow && withinRange;
+        return x >= 0 && x < Ex2Utils.WIDTH && y >= 0 && y < Ex2Utils.HEIGHT;
     }
     @Override
     public int getX() {
@@ -56,7 +51,7 @@ public class CellEntry  implements Index2D {
     }
     public String toString() {
         if (!isValid()) {
-            return null;
+            return "ERR";
         }
         return Ex2Utils.ABC[x]+(y + 1); //Convert coordinates back to cell reference
     }

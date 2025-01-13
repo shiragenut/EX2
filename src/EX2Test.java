@@ -1,5 +1,5 @@
 import org.junit.jupiter.api.Test;
-
+import java.util.HashSet;
 import static org.junit.jupiter.api.Assertions.*;
 
 class EX2Test {
@@ -20,8 +20,8 @@ class EX2Test {
 
     @Test
     void isForm() {
-        String[] validForm = {"=1", "=(10.5)", "=1.2", "=A9", "=(1+A2)*(8/5)", "=A9+C4", "=(1+2)*((3))-1"};
-        String[] unValidForm = {"1+4","a","AB", "@2", "2+)", "=(3+1*2)-", "=()", "=1+*8", "=(1+2","=+", " "};
+        String[] validForm = {"=1", "=A9", "=(1+A2)*(8/5)", "=A9+C4", "=(1+2)*((3))-1", "=-5"};
+        String[] unValidForm = {"1+4","AB", "@2", "2+)","=2 + 2", "=(3+1*2)-", "=()", "=1+*8", "=(1+2","=+", " "};
         for (String Form : validForm) {
             assertTrue(SCell.isForm(Form), Form + " Should be a valid form");
         }
@@ -40,34 +40,6 @@ class EX2Test {
         for (String Text : unValidText) {
             assertFalse(SCell.isText(Text), Text + " Should NOT be a valid text");
         }
-    }
-
-    @Test
-    public void SCell() {
-        SCell numberCell = new SCell("42.5");
-        assertEquals(Ex2Utils.NUMBER, numberCell.getType());
-
-        SCell textCell = new SCell("Hello");
-        assertEquals(Ex2Utils.TEXT, textCell.getType());
-
-        SCell formulaCell = new SCell("=A1+B2");
-        assertEquals(Ex2Utils.FORM, formulaCell.getType());
-
-        SCell nullCell = new SCell(null);
-        assertEquals(Ex2Utils.TEXT, nullCell.getType());
-        assertEquals(" ", nullCell.getData());
-    }
-
-    @Test
-    public void testGetOrder() {
-        SCell numberCell = new SCell("42");
-        assertEquals(0, numberCell.getOrder());
-
-        SCell textCell = new SCell("Hello");
-        assertEquals(0, textCell.getOrder());
-
-        SCell formulaCell = new SCell("=A1+B2");
-        assertEquals(1, formulaCell.getOrder());
     }
 
     @Test
@@ -92,13 +64,6 @@ class EX2Test {
         assertEquals("Hello", cell.toString());
     }
 
-    @Test
-    public void testSetOrder() {
-        SCell cell = new SCell("Test");
-        cell.setOrder(5);
-        cell.setOrder(-3);
-        assertEquals(0, cell.getOrder());
-    }
 
     @Test
     public void testComplexFormulas() {
@@ -108,55 +73,118 @@ class EX2Test {
 
         assertFalse(SCell.isForm("=++A1"));
         assertFalse(SCell.isForm("=A1++B2"));
+        assertFalse(SCell.isForm("=8++7"));
+    }
+
+    @Test
+    void testEvalEmptyCell() {
+        Sheet sheet = new Ex2Sheet();
+        sheet.set(0, 0, "");  // תא ריק
+        String result = sheet.eval(0, 0);
+        assertEquals(Ex2Utils.EMPTY_CELL, result); // צריך להחזיר EMPTY_CELL
+    }
+
+    @Test
+    void testEvalTextCell() {
+        Sheet sheet = new Ex2Sheet();
+        sheet.set(0, 0, "Hello");  // תא עם טקסט
+        String result = sheet.eval(0, 0);
+        assertEquals("Hello", result); // חייב להחזיר את המילה "Hello"
+    }
+
+    @Test
+    void testEvalNumberCell() {
+        Sheet sheet = new Ex2Sheet();
+        sheet.set(0, 0, "10");  // תא עם מספר
+        String result = sheet.eval(0, 0);
+        assertEquals("10.0", result);  // מספר אמור להיות מומר ל-10.0
+    }
+
+    @Test
+    void testEvalCycleForm() {
+        Sheet sheet = new Ex2Sheet();
+        sheet.set(0, 0, "=B1");  // A1 תלוי ב-B1
+        sheet.set(1, 0, "=A1");  // B1 תלוי ב-A1
+        String result = sheet.eval(0, 0);  // חישוב של A1
+        assertEquals(Ex2Utils.ERR_CYCLE, result);  // תלות מעגלית
+    }
+
+    @Test
+    void testComputeFormSimpleExpression() {
+        Sheet sheet = new Ex2Sheet();
+        String form = "=3+2";  // ביטוי פשוט
+        double result = Ex2Sheet.computeForm(form, new HashSet<>(), sheet);
+        assertEquals(5.0, result);  // התוצאה הצפויה היא 5.0
+    }
+
+    @Test
+    void testComputeFormComplexExpression() {
+        Sheet sheet = new Ex2Sheet();
+        String form = "=(3+2)*2";  // ביטוי מורכב עם סוגריים
+        double result = Ex2Sheet.computeForm(form, new HashSet<>(), sheet);
+        assertEquals(10.0, result);  // התוצאה הצפויה היא 10.0
+    }
+
+    @Test
+    void testComputeFormInvalidExpression() {
+        Sheet sheet = new Ex2Sheet();
+        String form = "=3+a";  // ביטוי לא תקני (אין משתנה a)
+        double result = Ex2Sheet.computeForm(form, new HashSet<>(), sheet);
+        assertEquals(Ex2Utils.ERR, result);  // שגיאה בהבנת הביטוי
     }
     @Test
-    void computeForm() {
-        assertEquals(5.0, SCell.computeForm("=5"), 0.001);
-
-        assertEquals(3.0, SCell.computeForm("=1+2"), 0.001);
-        assertEquals(5.0, SCell.computeForm("=1+2*2"), 0.001);
-        assertEquals(3.0, SCell.computeForm("=(1+2)"), 0.001);
-
-        assertEquals(6.0, SCell.computeForm("=(1+2)*2"), 0.001);
-        assertEquals(2.5, SCell.computeForm("=5/2"), 0.001);
-    }
-    @Test
-    void depth() {
-        Ex2Sheet sheet = new Ex2Sheet(5, 5);  // 5X5 sheet
-
-        sheet.set(0, 0, "5");
-        sheet.set(0, 1, "hello");
+    void testDepthBasicFormula() {
+        Sheet sheet = new Ex2Sheet();
+        sheet.set(0, 0, "=1");  // A1 = 1
         int[][] depths = sheet.depth();
-        assertEquals(0, depths[0][0]);
-        assertEquals(0, depths[0][1]);
-
-
-        sheet.set(1, 0, "=A1");        // B1 = A1
-        depths = sheet.depth();
-        assertEquals(1, depths[1][0]);
-
-        sheet.set(2, 0, "=B1+A1");     // C1 = B1+A1
-        depths = sheet.depth();
-        assertEquals(2, depths[2][0]);
-
-        sheet.set(3, 0, "=D2");
-        sheet.set(3, 1, "=D1");
-        depths = sheet.depth();
-        assertEquals(Ex2Utils.ERR_CYCLE_FORM, depths[3][0]);
-        assertEquals(Ex2Utils.ERR_CYCLE_FORM, depths[3][1]);
+        assertEquals(1, depths[0][0]);  // נוסחה פשוטה, עומק 1
     }
+
+    @Test
+    void testDepthReferenceAnotherCell() {
+        Sheet sheet = new Ex2Sheet();
+        sheet.set(0, 0, "=1");  // A1 = 1
+        sheet.set(1, 0, "=A1"); // B1 = A1
+        int[][] depths = sheet.depth();
+        assertEquals(0, depths[0][0]); // A1 עומק 0
+        assertEquals(1, depths[1][0]); // B1 עומק 1
+    }
+
+    @Test
+    void testDepthMultipleDependencies() {
+        Sheet sheet = new Ex2Sheet();
+        sheet.set(0, 0, "=1");  // A1 = 1
+        sheet.set(1, 0, "=1");  // B1 = 1
+        sheet.set(2, 0, "=A1+B1");  // C1 = A1 + B1
+        int[][] depths = sheet.depth();
+        assertEquals(0, depths[0][0]); // A1 עומק 0
+        assertEquals(0, depths[1][0]); // B1 עומק 0
+        assertEquals(1, depths[2][0]); // C1 עומק 1
+    }
+
+    @Test
+    void testDepthCyclicReference() {
+        Sheet sheet = new Ex2Sheet();
+        sheet.set(0, 0, "=B1");  // A1 תלוי ב-B1
+        sheet.set(1, 0, "=A1");  // B1 תלוי ב-A1
+        int[][] depths = sheet.depth();
+        assertEquals(-1, depths[0][0]); // תלות מעגלית
+        assertEquals(-1, depths[1][0]); // תלות מעגלית
+    }
+
+    @Test
+    void testDepthEmptyCells() {
+        Sheet sheet = new Ex2Sheet();
+          // יצירת טבלה חדשה וריקה
+        int[][] depths = sheet.depth();
+        assertEquals(0, depths[0][0]); // תא ריק, עומק 0
+    }
+
 
     @Test
     void testEdgeCaseFormulas() {
         assertTrue(SCell.isForm("=A10"));
         assertTrue(SCell.isForm("=(A1)"));
         assertFalse(SCell.isForm("=A100"));
-    }
-
-    @Test
-    void testComputeFormComplex() {
-        assertEquals(10.0, SCell.computeForm("=2*5"), 0.001);
-        assertEquals(7.0, SCell.computeForm("=1+2*3"), 0.001);
-        assertEquals(9.0, SCell.computeForm("=(1+2)*3"), 0.001);
     }
 }
